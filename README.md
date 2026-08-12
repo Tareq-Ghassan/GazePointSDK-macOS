@@ -80,6 +80,8 @@ swift build && swift run
 
 Allow Camera in System Settings. Tag: `v1.0.0`. See [TESTING.md](https://github.com/Tareq-Ghassan/FaceDetection-GazePoint/blob/main/TESTING.md).
 
+The Flutter plugin (`gazepoint_sdk` 3.0.4+) has its own macOS implementation (`macos/gazepoint_sdk/Sources`, Vision + AVFoundation). It does not wrap this native SDK. `flutter run -d macos` from `flutter/example` is the Flutter macOS test.
+
 ## License
 
 MIT License

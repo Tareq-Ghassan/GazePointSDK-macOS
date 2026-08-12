@@ -2,6 +2,8 @@
 
 This example demonstrates how to use the GazePoint SDK for macOS applications with real-time eye tracking using the Vision framework.
 
+This example is the **native macOS SDK** demo. For the Flutter plugin on macOS, use `flutter/example` and `flutter run -d macos` instead.
+
 ## Features
 
 - 👁️ Real-time eye tracking and gaze detection
