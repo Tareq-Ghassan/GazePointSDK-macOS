@@ -25,14 +25,14 @@ Native macOS implementation using Vision framework for real-time eye tracking an
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/Tareq-Ghassan/GazePointSDK-macOS.git", from: "2.0.0")
+    .package(url: "https://github.com/Tareq-Ghassan/GazePointSDK-macOS.git", from: "1.0.0")
 ]
 ```
 
 ### CocoaPods
 
 ```ruby
-pod 'GazePointSDK-macOS', '~> 2.0'
+pod 'GazePointSDK-macOS', :git => 'https://github.com/Tareq-Ghassan/GazePointSDK-macOS.git', :tag => 'v1.0.0'
 ```
 
 ## Quick Start
@@ -70,6 +70,15 @@ class ViewController: NSViewController {
 - ✅ AppKit applications
 - ✅ SwiftUI applications
 - ✅ Catalyst applications
+
+## Example
+
+```bash
+cd example
+swift build && swift run
+```
+
+Allow Camera in System Settings. Tag: `v1.0.0`. See [TESTING.md](https://github.com/Tareq-Ghassan/FaceDetection-GazePoint/blob/main/TESTING.md).
 
 ## License
 
