@@ -1,174 +1,166 @@
-import Foundation
-import GazePointSDK
+import AppKit
 import AVFoundation
+import GazePointSDK
 
-/// macOS console example for GazePoint SDK
-/// Demonstrates real-time eye tracking using Vision framework
+/// AppKit demo matching Android/iOS: full-window SDK preview, white face boxes,
+/// overlay card with status, gaze dot from `GazeCamera`.
 @main
-struct GazePointExample {
-    static func main() async {
-        print("═══════════════════════════════════════")
-        print("   GazePoint SDK - macOS Example")
-        print("═══════════════════════════════════════\n")
-        
-        do {
-            let example = GazePointExample()
-            try await example.run()
-        } catch {
-            print("❌ Error: \(error.localizedDescription)")
-            exit(1)
-        }
+enum GazePointExample {
+    static func main() {
+        let app = NSApplication.shared
+        let delegate = AppDelegate()
+        app.delegate = delegate
+        app.setActivationPolicy(.regular)
+        app.run()
     }
-    
-    func run() async throws {
-        // Check camera permissions
-        print("Checking camera permissions...")
-        let authorized = await checkCameraPermissions()
-        guard authorized else {
-            print("❌ Camera access denied. Please grant permissions in System Preferences.")
-            return
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var camera: GazeCamera?
+    private var window: NSWindow?
+    private var overlay: OverlayPanel?
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        let camera = GazeCamera()
+        self.camera = camera
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 720, height: 900),
+            styleMask: [.titled, .closable, .resizable, .miniaturizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "GazePoint SDK Demo"
+        window.center()
+
+        let root = NSView(frame: window.contentView?.bounds ?? .zero)
+        root.wantsLayer = true
+        root.layer?.backgroundColor = NSColor.black.cgColor
+        root.autoresizingMask = [.width, .height]
+
+        camera.previewView.frame = root.bounds
+        camera.previewView.autoresizingMask = [.width, .height]
+        root.addSubview(camera.previewView)
+
+        let flip = NSButton(title: "Flip Camera", target: nil, action: nil)
+        flip.bezelStyle = .rounded
+        flip.translatesAutoresizingMaskIntoConstraints = false
+        flip.target = camera
+        flip.action = #selector(GazeCamera.switchCamera)
+        root.addSubview(flip)
+
+        let overlay = OverlayPanel()
+        overlay.translatesAutoresizingMaskIntoConstraints = false
+        root.addSubview(overlay)
+        NSLayoutConstraint.activate([
+            flip.topAnchor.constraint(equalTo: root.topAnchor, constant: 16),
+            flip.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -16),
+            overlay.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 16),
+            overlay.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -16),
+            overlay.bottomAnchor.constraint(equalTo: root.bottomAnchor, constant: -16),
+        ])
+        self.overlay = overlay
+
+        camera.options = GazeCameraOptions(previewEnabled: true, showFaceBoxes: true)
+        camera.onFrame = { [weak overlay, weak window] frame in
+            overlay?.apply(frame)
+            window?.title = "GazePoint — \(frame.statusText)"
         }
-        print("✓ Camera access granted\n")
-        
-        // Initialize tracker
-        print("Initializing GazePoint tracker...")
-        let tracker = GazeTracker()
-        try await tracker.initialize()
-        print("✓ Tracker initialized successfully\n")
-        
-        // Set up event handlers
-        setupEventHandlers(tracker: tracker)
-        
-        // Start tracking
-        print("Starting eye tracking...")
-        try await tracker.startTracking()
-        print("✓ Tracking started\n")
-        
-        // Display instructions
-        displayInstructions()
-        
-        // Run calibration
-        print("\nRunning 9-point calibration...")
-        let calibrationResult = try await tracker.calibrate(points: 9)
-        print("✓ Calibration completed")
-        print(String(format: "  Average error: %.2fpx", calibrationResult.averageError))
-        print(String(format: "  Max error: %.2fpx", calibrationResult.maxError))
-        print()
-        
-        // Main loop
-        print("Real-time tracking active...")
-        print("(Press 'q' to quit)\n")
-        
-        var isRunning = true
-        while isRunning {
-            if let input = readLine()?.lowercased() {
-                switch input {
-                case "c":
-                    try await runCalibration(tracker: tracker)
-                case "s":
-                    try await showStats(tracker: tracker)
-                case "r":
-                    try await restartTracking(tracker: tracker)
-                case "q":
-                    isRunning = false
-                default:
-                    print("Unknown command. Press 'h' for help.")
-                }
-            }
-        }
-        
-        // Cleanup
-        print("\n\nStopping tracker...")
-        try await tracker.stopTracking()
-        print("✓ Tracker stopped successfully")
-        
-        print("\nGoodbye! 👋")
-    }
-    
-    func checkCameraPermissions() async -> Bool {
+
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:
-            return true
+            camera.start()
         case .notDetermined:
-            return await AVCaptureDevice.requestAccess(for: .video)
-        case .denied, .restricted:
-            return false
-        @unknown default:
-            return false
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                DispatchQueue.main.async {
+                    if granted {
+                        camera.start()
+                    } else {
+                        overlay.status.stringValue = "Camera permission denied"
+                    }
+                }
+            }
+        default:
+            overlay.status.stringValue = "Camera permission denied"
         }
+
+        window.contentView = root
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        self.window = window
     }
-    
-    func setupEventHandlers(tracker: GazeTracker) {
-        tracker.onGazeDetected = { result in
-            // Clear line and display gaze data
-            print("\r", terminator: "")
-            print(String(format: "👁️  Gaze: (%.0f, %.0f) | Confidence: %.1f%% | Head: P%.1f° Y%.1f° R%.1f°",
-                        result.gazePoint.x,
-                        result.gazePoint.y,
-                        result.confidence * 100,
-                        result.headPose.pitch,
-                        result.headPose.yaw,
-                        result.headPose.roll),
-                 terminator: "")
-            fflush(stdout)
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        camera?.stop()
+        return true
+    }
+}
+
+private final class OverlayPanel: NSView {
+    let status = NSTextField(labelWithString: "Starting camera…")
+    private let gaze = NSTextField(labelWithString: "Point the camera at your face.")
+    private let head = NSTextField(labelWithString: "")
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.black.withAlphaComponent(0.55).cgColor
+        layer?.cornerRadius = 16
+
+        let title = NSTextField(labelWithString: "GazePoint SDK Demo")
+        title.font = .boldSystemFont(ofSize: 16)
+        title.textColor = .white
+
+        status.font = .systemFont(ofSize: 14)
+        status.textColor = .systemYellow
+        gaze.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
+        gaze.textColor = .white
+        head.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
+        head.textColor = .white
+
+        let stack = NSStackView(views: [title, status, gaze, head])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 6
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
+            stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -14),
+            stack.topAnchor.constraint(equalTo: topAnchor, constant: 14),
+            stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -14),
+        ])
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func apply(_ frame: GazeFrame) {
+        status.stringValue = frame.statusText
+        status.textColor = frame.faceDetected && !frame.hasMultipleFaces
+            ? .systemGreen
+            : .systemYellow
+        if let result = frame.gaze, frame.faceDetected {
+            gaze.stringValue = String(
+                format: "Gaze: (%.0f, %.0f)  Confidence: %.0f%%",
+                result.gazePoint.x,
+                result.gazePoint.y,
+                result.confidence * 100
+            )
+            head.stringValue = String(
+                format: "Head  pitch: %.1f  yaw: %.1f  roll: %.1f  %@",
+                result.headPose.pitch,
+                result.headPose.yaw,
+                result.headPose.roll,
+                result.isBlinking ? "Eyes: blinking" : "Eyes: open"
+            )
+        } else if frame.faceDetected {
+            gaze.stringValue = "Gaze is only calculated when one face is in frame."
+            head.stringValue = ""
+        } else {
+            gaze.stringValue = "Point the camera at your face."
+            head.stringValue = ""
         }
-        
-        tracker.onBlinkDetected = {
-            print("\n👁️ Blink detected!")
-        }
-        
-        tracker.onTrackingLost = {
-            print("\n⚠️  Tracking lost - please position your face in the camera view")
-        }
-    }
-    
-    func displayInstructions() {
-        print("═══════════════════════════════════════")
-        print("Commands:")
-        print("  [c] Calibrate")
-        print("  [s] Show Statistics")
-        print("  [r] Restart Tracking")
-        print("  [q] Quit")
-        print("═══════════════════════════════════════")
-    }
-    
-    func runCalibration(tracker: GazeTracker) async throws {
-        print("\n\nStarting calibration...")
-        print("Look at each point that appears on the screen.")
-        
-        let result = try await tracker.calibrate(points: 9)
-        print("✓ Calibration completed successfully")
-        print(String(format: "  Average error: %.2fpx", result.averageError))
-        print(String(format: "  Max error: %.2fpx", result.maxError))
-    }
-    
-    func showStats(tracker: GazeTracker) async throws {
-        print("\n\n═══════════════════════════════════════")
-        print("Performance Statistics")
-        print("═══════════════════════════════════════")
-        
-        let stats = try await tracker.getPerformanceStats()
-        
-        print(String(format: "Frame Rate: %.1f FPS", stats.fps))
-        print(String(format: "Average Latency: %.1fms", stats.averageLatency))
-        print(String(format: "Dropped Frames: %d", stats.droppedFrames))
-        print(String(format: "Tracking Time: %@", formatDuration(stats.totalTrackingTime)))
-        print(String(format: "Blinks Detected: %d", stats.totalBlinks))
-        print("═══════════════════════════════════════\n")
-    }
-    
-    func restartTracking(tracker: GazeTracker) async throws {
-        print("\n\nRestarting tracking...")
-        try await tracker.stopTracking()
-        try await Task.sleep(nanoseconds: 500_000_000) // 500ms
-        try await tracker.startTracking()
-        print("✓ Tracking restarted successfully")
-    }
-    
-    func formatDuration(_ seconds: TimeInterval) -> String {
-        let hours = Int(seconds) / 3600
-        let minutes = (Int(seconds) % 3600) / 60
-        let secs = Int(seconds) % 60
-        return String(format: "%02d:%02d:%02d", hours, minutes, secs)
     }
 }

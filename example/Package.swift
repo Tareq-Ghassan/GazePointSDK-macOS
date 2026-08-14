@@ -1,10 +1,10 @@
-// swift-tools-version: 5.7
+// swift-tools-version:6.3
 import PackageDescription
 
 let package = Package(
     name: "GazePointExample",
     platforms: [
-        .macOS(.v12)
+        .macOS(.v13)
     ],
     dependencies: [
         .package(path: "..")
@@ -13,9 +13,10 @@ let package = Package(
         .executableTarget(
             name: "GazePointExample",
             dependencies: [
-                .product(name: "GazePointSDK", package: "GazePointSDK")
+                .product(name: "GazePointSDK", package: "macos")
             ],
-            path: "."
+            path: ".",
+            exclude: ["README.md", "Package.swift"]
         )
     ]
 )
