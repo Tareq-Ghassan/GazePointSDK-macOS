@@ -16,10 +16,9 @@ enum FaceBoxMapping {
         }
     }
 
-    /// Vision box is normalized with origin at the bottom-left of the oriented image.
-    /// Result is in preview-view coordinates (origin top-left), inset so the stroke
-    /// sits on the face rather than around hair / background.
-    static func mapVisionBox(
+    /// Vision box (normalized, origin bottom-left) → unflipped NSView / CALayer
+    /// coordinates (also origin bottom-left), aspect-filled like the preview.
+    static func mapVisionBoxToLayer(
         _ box: CGRect,
         imageSize: CGSize,
         viewSize: CGSize,
@@ -35,9 +34,10 @@ enum FaceBoxMapping {
         let ox = (viewSize.width - drawnW) / 2
         let oy = (viewSize.height - drawnH) / 2
 
+        // Vision and an unflipped CALayer share a bottom-left origin. Do not invert Y.
         var rect = CGRect(
             x: box.origin.x * drawnW + ox,
-            y: (1 - box.origin.y - box.height) * drawnH + oy,
+            y: box.origin.y * drawnH + oy,
             width: box.width * drawnW,
             height: box.height * drawnH
         )

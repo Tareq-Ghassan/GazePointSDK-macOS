@@ -132,6 +132,7 @@ public final class GazeCamera: NSObject, @unchecked Sendable {
     private func applyPreviewVisibility() {
         DispatchQueue.main.async {
             self.previewView.isHidden = !self.options.previewEnabled
+            self.cachedPreviewSize = self.previewView.bounds.size
             if !self.options.previewEnabled || !self.options.showFaceBoxes {
                 self.previewView.clearFaceBoxes()
             }

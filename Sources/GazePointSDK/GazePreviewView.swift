@@ -5,8 +5,6 @@ import QuartzCore
 /// Live camera preview plus white face-box overlay, owned by the macOS SDK.
 @available(macOS 13.0, *)
 public final class GazePreviewView: NSView {
-    public override var isFlipped: Bool { true }
-
     public let videoPreviewLayer = AVCaptureVideoPreviewLayer()
     private let boxesLayer = CAShapeLayer()
 
@@ -38,7 +36,9 @@ public final class GazePreviewView: NSView {
         boxesLayer.frame = bounds
     }
 
-    /// Vision boxes are normalized, origin at the bottom-left of the oriented image.
+    /// Vision boxes are normalized with origin at the bottom-left of the image,
+    /// matching an unflipped AppKit layer. Map through aspect-fill; flip X when
+    /// the preview is mirrored.
     public func setFaceBoxes(
         _ visionBoxes: [CGRect],
         imageSize: CGSize,
@@ -46,15 +46,14 @@ public final class GazePreviewView: NSView {
     ) {
         let path = CGMutablePath()
         for box in visionBoxes {
-            var rect = FaceBoxMapping.mapVisionBox(
-                box,
-                imageSize: imageSize,
-                viewSize: bounds.size,
-                flipX: flipX
+            path.addRect(
+                FaceBoxMapping.mapVisionBoxToLayer(
+                    box,
+                    imageSize: imageSize,
+                    viewSize: bounds.size,
+                    flipX: flipX
+                )
             )
-            // CALayer is bottom-left; mapping is top-left (same as iOS UIView).
-            rect.origin.y = bounds.height - rect.origin.y - rect.height
-            path.addRect(rect)
         }
         boxesLayer.path = path
     }

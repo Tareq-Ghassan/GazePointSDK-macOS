@@ -62,9 +62,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.overlay = overlay
 
         camera.options = GazeCameraOptions(previewEnabled: true, showFaceBoxes: true)
-        camera.onFrame = { [weak overlay, weak window] frame in
+
+        let gazeDot = GazeDotView(frame: NSRect(x: 0, y: 0, width: 28, height: 28))
+        gazeDot.isHidden = true
+        camera.previewView.addSubview(gazeDot)
+
+        camera.onFrame = { [weak overlay, weak window, weak gazeDot, weak camera] frame in
             overlay?.apply(frame)
             window?.title = "GazePoint — \(frame.statusText)"
+            guard let gazeDot, let preview = camera?.previewView else { return }
+            if let gaze = frame.gaze {
+                gazeDot.isHidden = false
+                let r: CGFloat = 14
+                let p = gaze.gazePoint
+                // SDK gaze is top-left; this preview view is not flipped.
+                gazeDot.setFrameOrigin(NSPoint(
+                    x: p.x - r,
+                    y: preview.bounds.height - p.y - r
+                ))
+            } else {
+                gazeDot.isHidden = true
+            }
         }
 
         switch AVCaptureDevice.authorizationStatus(for: .video) {
@@ -93,6 +111,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         camera?.stop()
         return true
+    }
+}
+
+private final class GazeDotView: NSView {
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.systemGreen.withAlphaComponent(0.85).cgColor
+        layer?.cornerRadius = frameRect.width / 2
+        layer?.borderColor = NSColor.white.cgColor
+        layer?.borderWidth = 2
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
     }
 }
 

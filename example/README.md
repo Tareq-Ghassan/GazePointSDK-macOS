@@ -12,6 +12,7 @@ GazePointSDK-macOS/
 
 - Live camera preview from the SDK (`GazePreviewView`)
 - White outline on every detected face, aligned to the face
+- Green gaze indicator on the preview when exactly one face is in frame
 - **Flip Camera** button (cycles Mac cameras)
 - Bottom status card with gaze, confidence, head pose, and blink
 - Window title also shows `statusText` (`Multiple faces detected` when two faces are in frame; gaze is not calculated then)
