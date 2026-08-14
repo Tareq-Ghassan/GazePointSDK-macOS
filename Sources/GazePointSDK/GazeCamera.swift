@@ -82,6 +82,16 @@ public final class GazeCamera: NSObject, @unchecked Sendable {
         applyPreviewVisibility()
     }
 
+    /// Flutter plugins register off the main actor; hop here so NSView setup is legal.
+    nonisolated public static func create() -> GazeCamera {
+        if Thread.isMainThread {
+            return MainActor.assumeIsolated { GazeCamera() }
+        }
+        return DispatchQueue.main.sync {
+            MainActor.assumeIsolated { GazeCamera() }
+        }
+    }
+
     public func start() {
         sessionQueue.async { [weak self] in
             guard let self else { return }

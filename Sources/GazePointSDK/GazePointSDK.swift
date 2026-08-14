@@ -6,7 +6,7 @@ import Foundation
 /// Use ``GazeTracker`` when you already have a `CVPixelBuffer`.
 @available(macOS 13.0, *)
 public struct GazePointSDK {
-    public static let version = "2.2.0"
+    public static let version = "2.2.1"
     public static let build = "1"
 
     public static var fullVersion: String {

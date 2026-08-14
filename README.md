@@ -29,14 +29,14 @@ Native macOS eye tracking using AVFoundation and Apple Vision. Preview, white fa
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/Tareq-Ghassan/GazePointSDK-macOS.git", from: "2.2.0")
+    .package(url: "https://github.com/Tareq-Ghassan/GazePointSDK-macOS.git", from: "2.2.1")
 ]
 ```
 
 ### CocoaPods
 
 ```ruby
-pod 'GazePointSDK-macOS', :git => 'https://github.com/Tareq-Ghassan/GazePointSDK-macOS.git', :tag => '2.2.0'
+pod 'GazePointSDK-macOS', :git => 'https://github.com/Tareq-Ghassan/GazePointSDK-macOS.git', :tag => '2.2.1'
 ```
 
 ## Quick Start
@@ -81,7 +81,7 @@ swift build && swift run
 
 Allow Camera for Terminal or Xcode in System Settings. See [TESTING.md](https://github.com/Tareq-Ghassan/FaceDetection-GazePoint/blob/main/TESTING.md).
 
-The Flutter plugin (`gazepoint_sdk`) has its own macOS implementation. It does not wrap this native SDK yet. `flutter run -d macos` from `flutter/example` is the Flutter macOS test.
+The Flutter plugin (`gazepoint_sdk`) ships a **source snapshot** of this SDK under `macos/gazepoint_sdk`. Releasing this repo does not update pub.dev until that snapshot is copied. `flutter run -d macos` from `flutter/example` is the Flutter macOS test.
 
 ## License
 
