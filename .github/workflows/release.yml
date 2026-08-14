@@ -1,5 +1,7 @@
 name: Release
 
+# GitHub Release (sidebar Latest). A git tag alone is not a Release.
+
 on:
   push:
     tags:
